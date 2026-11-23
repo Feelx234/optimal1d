@@ -66,3 +66,69 @@ impl CellSums {
         }
     }
 }
+
+/// Same values (bit for bit) as [`CellSums`], but laid out by global position so a
+/// lookup needs no row arithmetic and touches few cache lines. About 20-30% faster
+/// for the DP methods that evaluate `i -> j` edges in unpredictable order (slower
+/// than [`CellSums`] for the sequential scans of the simple DP).
+pub struct IndexedCellSums {
+    cell_size: usize,
+    /// `[sum[r], sum2[r]]`: in-cell prefix sums *before* the position
+    lo: Vec<[f64; 2]>,
+    /// `[sum[r + 1], sum2[r + 1]]`: in-cell prefix sums *including* the position
+    hi: Vec<[f64; 2]>,
+    /// totals `[sum, sum2]` of the whole cell containing the position
+    tot: Vec<[f64; 2]>,
+}
+
+impl IndexedCellSums {
+    pub fn new(v: &[f64], cell_size: usize) -> Self {
+        let n = v.len();
+        let mut lo = vec![[0.0; 2]; n];
+        let mut hi = vec![[0.0; 2]; n];
+        let mut tot = vec![[0.0; 2]; n];
+        let mut off = 0;
+        while off < n {
+            let len = (n - off).min(cell_size);
+            let (mut s, mut s2) = (0.0, 0.0);
+            for j in 0..len {
+                lo[off + j] = [s, s2];
+                let x = v[off + j];
+                s += x;
+                s2 += x * x;
+                hi[off + j] = [s, s2];
+            }
+            // totals are only read for the first cell of a two-cell cluster (always a full cell)
+            for t in &mut tot[off..off + len] {
+                *t = [s, s2];
+            }
+            off += cell_size;
+        }
+        Self { cell_size, lo, hi, tot }
+    }
+
+    /// SSE of the points `i..=j` (both inclusive); `0` if `j <= i`.
+    #[inline]
+    pub fn sse(&self, i: usize, j: usize) -> f64 {
+        let cs = self.cell_size;
+        if i / cs == j / cs {
+            if j <= i {
+                return 0.0;
+            }
+            let (a, b) = (&self.lo[i], &self.hi[j]);
+            sse_from_sums(b[0] - a[0], b[1] - a[1], j + 1 - i)
+        } else {
+            debug_assert!(j / cs == i / cs + 1, "cluster spans more than two cells");
+            let (a, b, t) = (&self.lo[i], &self.hi[j], &self.tot[i]);
+            let i_cs = t[0] - a[0];
+            let i_cs2 = t[1] - a[1];
+            let val1 = b[0] + i_cs;
+            let cnt = (j + 1 - i) as f64;
+            let mu = val1 / cnt;
+            let mut result = b[1] + i_cs2;
+            result -= (2.0 * mu) * val1;
+            result += cnt * (mu * mu);
+            result.max(0.0)
+        }
+    }
+}

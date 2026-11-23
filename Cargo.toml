@@ -1,10 +1,10 @@
 [package]
-name = "oned-core"
+name = "optimal1d"
 description = "Shared compiled core (SMAWK, concave 1D dynamic programming, cost functions) for microagg1d and fast1dkmeans"
 version = "0.1.0"
 edition = "2021"
 license = "BSD-3-Clause"
 authors = ["Felix I. Stamm <felix.stamm@rwth-aachen.de>"]
-repository = "https://github.com/Feelx234/oned-core"
+repository = "https://github.com/Feelx234/optimal1d"
 
 [dependencies]

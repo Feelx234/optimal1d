@@ -135,7 +135,7 @@ fn sse(x: &[f64], k: usize, method: Method, stable: u8) -> Result<Vec<i64>, Stri
             let sum: f64 = x.iter().sum();
             let sum2: f64 = x.iter().map(|v| v * v).sum();
             let small = sse_from_sums(sum, sum2, n);
-            let seg = StableSseSegment::new(x, 3 * k);
+            let seg = IndexedStableSseSegment::new(x, 3 * k);
             run_dp(n, k, method, &Adapted::new(seg, k, small, small * (1.0 + n_f)))
         }
         2 => {

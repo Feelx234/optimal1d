@@ -1,4 +1,4 @@
-# oned-core
+# optimal1d
 
 Rust core shared by the Python packages
 [microagg1d](https://github.com/Feelx234/microagg1d) (optimal univariate microaggregation) and

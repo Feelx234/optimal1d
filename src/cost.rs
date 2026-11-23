@@ -6,7 +6,7 @@
 //! the DP values `F[i]` and, for microaggregation, the cluster size constraint
 //! `k <= j - i <= 2k - 1`.
 
-use crate::stable::CellSums;
+use crate::stable::{CellSums, IndexedCellSums};
 
 /// Cost of the cluster consisting of the sorted points `i..j` (`i < j`).
 pub trait Segment {
@@ -139,6 +139,23 @@ impl Segment for NoPrecomputeSseSegment<'_> {
             r += (x - mean) * (x - mean);
         }
         r
+    }
+}
+
+/// [`StableSseSegment`] with the position indexed layout (faster for Wilber,
+/// Galil-Park and staggered, identical values).
+pub struct IndexedStableSseSegment {
+    pub cells: IndexedCellSums,
+}
+impl IndexedStableSseSegment {
+    pub fn new(v: &[f64], cell_size: usize) -> Self {
+        Self { cells: IndexedCellSums::new(v, cell_size) }
+    }
+}
+impl Segment for IndexedStableSseSegment {
+    #[inline]
+    fn seg(&self, i: usize, j: usize) -> f64 {
+        self.cells.sse(i, j - 1)
     }
 }
 
